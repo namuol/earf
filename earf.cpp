@@ -1,5 +1,6 @@
 #include <iostream>
 #include <SDL/SDL.h>
+#include <SDL/SDL_keysym.h>
 #include <SDL/SDL_image.h>
 
 #include "ITimer.h"
@@ -11,14 +12,46 @@
 
 using namespace std;
 bool running = true;
+bool leftdown, rightdown, updown, downdown;
 
 void quit() {
   SDL_Quit();
 }
 
+void handle_key(SDL_Event* e, bool keydown) {
+  switch (e->key.keysym.sym) {
+    case SDLK_LEFT:
+      leftdown = keydown;
+      break;
+    case SDLK_RIGHT:
+      rightdown = keydown;
+      break;
+    case SDLK_UP:
+      updown = keydown;
+      break;
+    case SDLK_DOWN:
+      downdown = keydown;
+      break;
+    default:
+      break;
+  }
+}
+
 void event(SDL_Event* e) {
-  if (e->type == SDL_QUIT) {
+  switch (e->type) {
+  case SDL_QUIT:
     running = false;
+    break;
+  case SDL_KEYDOWN:
+    if (e->key.keysym.sym == SDLK_ESCAPE) {
+      running = false;
+      break;
+    }
+    handle_key(e, true);
+    break;
+  case SDL_KEYUP:
+    handle_key(e, false);
+    break;
   }
 }
 
@@ -37,14 +70,14 @@ int main(int ac, char** av) {
     return -2;
   }
   SDL_Surface* _map, * map;
-  _map = IMG_Load("heightmap.png");
+  _map = IMG_Load("heightmap.jpg");
   //_map = IMG_Load("wat.jpg");
   map = SDL_DisplayFormat(_map);
 
   cout << scr->format << endl;
   cout << map->format << endl;
 
-  Camera* cam = new Camera(Vector(127,100,127), 45, SCR_W,SCR_H);
+  Camera* cam = new Camera(Vector(map->w/2,128,map->h/2), 25, SCR_W,SCR_H);
 
 
   POSIXTimer timer;
@@ -57,6 +90,7 @@ int main(int ac, char** av) {
   int maxCyclesPerFrame = 8;
   SDL_Event e;
 
+  Vector cv;
   while( running )
   {
     int currentTime;
@@ -75,7 +109,28 @@ int main(int ac, char** av) {
       updateIterations -= updateInterval;
 
       // UPDATE EVERYTHING.
-      cam->eye(cam->eye() + Vector(0.5,0.0,0.5));
+      if (updown)
+        cv.z -= 0.2;
+      if (downdown)
+        cv.z += 0.2;
+      if (leftdown)
+        cv.x -= 0.2;
+      if (rightdown)
+        cv.x += 0.2;
+      
+
+      double h; 
+      Uint8 r,g,b;
+      Vector eye = cam->eye();
+      if (eye.x >= 0 && eye.z >= 0) {
+        Uint32 c = getpixel(map, (int)(eye.x)%map->w,(int)(eye.z)%map->h);         
+        SDL_GetRGB(c, scr->format, &r, &g, &b);
+        h = (double)r * 0.25;
+        double target = (h+55) - eye.y;
+        cv.y = (target - cv.y) * 0.1;
+      }
+      cam->eye(cam->eye() + cv);
+      cv *= 0.9;
       while (SDL_PollEvent(&e)) {
         event(&e);
       }
@@ -97,7 +152,7 @@ int main(int ac, char** av) {
       Uint8 r,g,b;
       Ray ray = cam->getRayFromUV(x,0);
       ch = ray.pos.y;
-      for (double d = 5; d < 256; d += 1) {
+      for (double d = 5; d < 255; d += 1) {
         cx = 1 * (ray.pos.x + ray.norm.x * d);
         cz = 1 * (ray.pos.z + ray.norm.z * d);
         if (cx < 0 || cz < 0) continue;
@@ -107,12 +162,14 @@ int main(int ac, char** av) {
         //cout << "h: " << h << endl;
         SDL_GetRGB(c, scr->format, &r, &g, &b);
         h = (double)r * 0.25;
-        if (h < 25) {
-          h = 25;
-          r *= 0.1;
-          g *= 0.5;
-          b *= 0.8;
-        } 
+        /*
+        if (h < 15) {
+          h = 15;
+          r = 10;
+          g = 35;
+          b = 50;
+        }
+        */
 
         //int y = SCR_H - (((h - ch) * (13.4/d)) / 256.0) * SCR_H;
         int y = SCR_H - (((h - ch) * 350) / d + SCR_H);
@@ -121,7 +178,7 @@ int main(int ac, char** av) {
         if (y < 0) break;
         if (y >= SCR_H) continue;
 
-        double fog = 1.0 - d/256;
+        double fog = 1.0 - d/255;
         r*=fog;
         g*=fog;
         b*=fog;
@@ -147,7 +204,8 @@ int main(int ac, char** av) {
     SDL_Flip(scr);
 
     int leftoverTime = updateInterval - (timer.get_time() - lastFrameTime);
-    cout << leftoverTime << endl;
+    if (leftoverTime < 0)
+      cout << leftoverTime << endl;
     // If we have more than 1 update interval worth of time left still,
     //  wait it out to save CPU cycles.
     if( leftoverTime > timer.precision() )
