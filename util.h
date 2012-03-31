@@ -24,6 +24,8 @@
 
 #define RAND(max) (((double)rand()/(double)RAND_MAX)*(max))
 
+#define MOD(x,m) ((x)%(m)+(m))%(m)
+inline int mod(int x, int m) { int r=x%m; return r<0?r+m:r; }
 
 typedef unsigned char u8;
 

@@ -23,6 +23,7 @@ void event(SDL_Event* e) {
 }
 
 int main(int ac, char** av) {
+  cout << -4 % 255 << endl;
 
   SDL_Surface* scr;
 
@@ -37,12 +38,13 @@ int main(int ac, char** av) {
   }
   SDL_Surface* _map, * map;
   _map = IMG_Load("heightmap.png");
+  //_map = IMG_Load("wat.jpg");
   map = SDL_DisplayFormat(_map);
 
   cout << scr->format << endl;
   cout << map->format << endl;
 
-  Camera* cam = new Camera(Vector(127,64,127), 45, SCR_W,SCR_H);
+  Camera* cam = new Camera(Vector(127,100,127), 45, SCR_W,SCR_H);
 
 
   POSIXTimer timer;
@@ -88,33 +90,46 @@ int main(int ac, char** av) {
     if(SDL_MUSTLOCK(map)) SDL_LockSurface(map);
     for (int x=0; x < SCR_W; ++x) {
       double maxH = 0;
-      int maxY = SCR_H;
+      int maxY = SCR_H-1;
       double cx,cy,cz;
       double h, ch;
       Uint32 c;
       Uint8 r,g,b;
       Ray ray = cam->getRayFromUV(x,0);
       ch = ray.pos.y;
-      for (double d = 15; d < 256; d += 1) {
-        cx = ray.pos.x + ray.norm.x * d;
-        cz = ray.pos.z + ray.norm.z * d;
+      for (double d = 5; d < 256; d += 1) {
+        cx = 1 * (ray.pos.x + ray.norm.x * d);
+        cz = 1 * (ray.pos.z + ray.norm.z * d);
         if (cx < 0 || cz < 0) continue;
         //cout << cx << ":" << cz << endl;
         c = getpixel(map, (int)cx%map->w,(int)cz%map->h);         
-        h = (double)r * 0.25;
+        //c = getpixel(map, mod((int)cx,map->w),mod((int)cz,map->h));         
         //cout << "h: " << h << endl;
         SDL_GetRGB(c, scr->format, &r, &g, &b);
-        //int y = SCR_H/2 - (((h - ch) * (13.4/d)) / 256.0) * SCR_H;
-        int y = ((h - ch) * 250) / d + SCR_H; 
+        h = (double)r * 0.25;
+        if (h < 25) {
+          h = 25;
+          r *= 0.1;
+          g *= 0.5;
+          b *= 0.8;
+        } 
+
+        //int y = SCR_H - (((h - ch) * (13.4/d)) / 256.0) * SCR_H;
+        int y = SCR_H - (((h - ch) * 350) / d + SCR_H);
+
         //cout << y << endl;
-        if (y < 0) continue;
-        if (y >= SCR_H) break;
-        
-        //if (y < maxY) {
-          //for (int _y = maxY; _y > y; --_y)
-            setpixelc(scr, x,y, c);
-          //maxY = y;
-        //}
+        if (y < 0) break;
+        if (y >= SCR_H) continue;
+
+        double fog = 1.0 - d/256;
+        r*=fog;
+        g*=fog;
+        b*=fog;
+        if (y < maxY) {
+          for (int _y = maxY; _y > y; --_y)
+            setpixel(scr, x,_y, r,g,b);
+          maxY = y;
+        }
       }
     }
     // For each column of pixels...

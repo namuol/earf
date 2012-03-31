@@ -1,4 +1,4 @@
-export DEBUG    = yes 
+export DEBUG    = no 
 export STATIC   = no
 
 ifeq ($(DEBUG), yes)
