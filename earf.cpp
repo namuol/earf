@@ -15,7 +15,8 @@
 
 using namespace std;
 bool running = true;
-bool leftdown, rightdown, updown, downdown, wdown, sdown;
+bool leftdown, rightdown, updown, downdown,
+     wdown, sdown, qdown, edown;
 bool recording = false;
 
 void quit() {
@@ -41,6 +42,12 @@ void handle_key(SDL_Event* e, bool keydown) {
       break;
     case SDLK_s:
       sdown = keydown;
+      break;
+    case SDLK_q:
+      qdown = keydown;
+      break;
+    case SDLK_e:
+      edown = keydown;
       break;
     case SDLK_SPACE:
       recording = !recording;
@@ -124,18 +131,23 @@ int main(int ac, char** av) {
 
       // UPDATE EVERYTHING.
       if (updown)
-        cv.z -= 0.2;
+        cv += cam->look()*0.2;
       if (downdown)
-        cv.z += 0.2;
+        cv -= cam->look()*0.2;
       if (leftdown)
-        cv.x -= 0.2;
+        cv += cam->perp()*0.2;
       if (rightdown)
-        cv.x += 0.2;
+        cv -= cam->perp()*0.2;
 
       if (wdown)
         camH += 4;
       if (sdown)
         camH -= 4;
+      
+      if (qdown)
+        cam->ang(cam->ang() + 0.03);
+      if (edown)
+        cam->ang(cam->ang() - 0.03);
 
       double h; 
       Uint8 r,g,b;

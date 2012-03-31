@@ -16,12 +16,14 @@ public:
     : _eye(eye), _scr_w(scr_w), _scr_h(scr_h) 
     {
         this->fovy(fovy);
+        ang(0);
     }
 
     Camera(const Camera& other)
     : _eye(other.eye()), _scr_w(other.scr_w()), _scr_h(other.scr_h()) 
     {
         fovy(other.fovy());
+        ang(0);
     }
 
     ~Camera()
@@ -51,19 +53,19 @@ public:
 
     int scr_h() const { return _scr_h; }
     void scr_h( int v ) { _scr_h = v; }
+    double ang() {return _ang;};
+    void ang(double v) {
+      _ang = v;
+      _look = Vector(-sin(_ang), 0, -cos(_ang)).normal();
+      _perp = Vector(-sin(_ang + PI/2), 0, -cos(_ang + PI/2)).normal();
+    }
 
     // Returns a Vector which points in the direction of an eye ray for
-    //  a given (sub)pixel coordinate:
-    /*
-    Ray getRayFromUV(double u, double v) const
-    {
-        return Ray(_eye, Vector( _xstart + u*_xmult, _ystart + v*_ymult, -1 ));
-    }
-    */
-
+    //  a given pixel coordinate:
     Ray getRayFromUV(int u, int v) const
     {
-        return Ray(_eye, Vector( _xstart + u*_xmult, _ystart + v*_ymult, -1 ).normal());
+      Vector p = _look - (_perp * (_xstart + u*_xmult));
+      return Ray(_eye, Vector(p.x, _ystart + v*_ymult, p.z).normal());
     }
 
     void fastCast(int u, int v, double d, double& x, double& y, double& z) const
@@ -73,11 +75,16 @@ public:
       z = _eye.z + -d; 
     }
 
+    const Vector& look() { return _look; }
+    const Vector& perp() { return _perp; }
+
 private:
     Point _eye;
     double _fovx,_fovy,
            _xstart,_ystart,
            _xmult,_ymult;
+    double _ang;
+    Vector _look, _perp;
 
     int _scr_w, _scr_h;
 };
