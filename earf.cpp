@@ -16,6 +16,7 @@
 using namespace std;
 bool running = true;
 bool leftdown, rightdown, updown, downdown, wdown, sdown;
+bool recording = false;
 
 void quit() {
   SDL_Quit();
@@ -40,6 +41,9 @@ void handle_key(SDL_Event* e, bool keydown) {
       break;
     case SDLK_s:
       sdown = keydown;
+      break;
+    case SDLK_SPACE:
+      recording = !recording;
       break;
     default:
       break;
@@ -80,14 +84,12 @@ int main(int ac, char** av) {
   }
   SDL_Surface* _map, * map;
   _map = IMG_Load("heightmap.jpg");
-  //_map = IMG_Load("wat.jpg");
   map = SDL_DisplayFormat(_map);
 
   cout << scr->format << endl;
   cout << map->format << endl;
 
-  Camera* cam = new Camera(Vector(map->w/2,128,map->h/2), 25, SCR_W,SCR_H);
-
+  Camera* cam = new Camera(Vector(map->w/2,1280,map->h/2), 25, SCR_W,SCR_H);
 
   POSIXTimer timer;
   timer.init();
@@ -101,6 +103,8 @@ int main(int ac, char** av) {
   SDL_Event e;
 
   Vector cv;
+  int frame = 1;
+  char fn [255];
   while( running )
   {
     int currentTime;
@@ -129,9 +133,9 @@ int main(int ac, char** av) {
         cv.x += 0.2;
 
       if (wdown)
-        camH += 1;
+        camH += 4;
       if (sdown)
-        camH -= 1;
+        camH -= 4;
 
       double h; 
       Uint8 r,g,b;
@@ -170,21 +174,11 @@ int main(int ac, char** av) {
         cx = 1 * (ray.pos.x + ray.norm.x * d);
         cz = 1 * (ray.pos.z + ray.norm.z * d);
         if (cx < 0 || cz < 0) continue;
-        //cout << cx << ":" << cz << endl;
         c = getpixel(map, (int)cx%map->w,(int)cz%map->h);         
-        //c = getpixel(map, mod((int)cx,map->w),mod((int)cz,map->h));         
-        //cout << "h: " << h << endl;
         SDL_GetRGB(c, scr->format, &r, &g, &b);
         h = (double)r * 0.25;
-        /*
-        if (h < 15) {
-          h = 15;
-          r = 10;
-          g = 35;
-          b = 50;
-        }
-        */
 
+        // My projection function doesn't work, but the simpler one below it does...
         //int y = SCR_H - (((h - ch) * (13.4/d)) / 256.0) * SCR_H;
         int y = SCR_H - (((h - ch) * 350) / d + SCR_H);
 
@@ -204,23 +198,21 @@ int main(int ac, char** av) {
         }
       }
     }
-    // For each column of pixels...
-    //   For each pixel in column (bottom-to-top)...
-    //     Cast Ray for pixel:
-    //       For each point in heightmap along this ray, starting at current highest...
-    //         RETURN if off the map.
-    //         Compute distance D along ray to point centered above heightmap point.
-    //         Is height of ray at D below heightmap?
-    //          YES: set current highest to current heightmap point
-    //          NO:  move "forward" one point on heightmap.
-    //     
+
     SDL_UnlockSurface(scr);
     SDL_UnlockSurface(map);
     SDL_Flip(scr);
 
+    if (recording && frame%5==1) {
+      sprintf(fn, "%06d.bmp", frame);
+      SDL_SaveBMP(scr, fn);
+    }
+    ++frame;
+
     int leftoverTime = updateInterval - (timer.get_time() - lastFrameTime);
     if (leftoverTime < 0)
       cout << leftoverTime << endl;
+
     // If we have more than 1 update interval worth of time left still,
     //  wait it out to save CPU cycles.
     if( leftoverTime > timer.precision() )
