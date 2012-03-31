@@ -15,7 +15,7 @@
 
 using namespace std;
 bool running = true;
-bool leftdown, rightdown, updown, downdown;
+bool leftdown, rightdown, updown, downdown, wdown, sdown;
 
 void quit() {
   SDL_Quit();
@@ -34,6 +34,12 @@ void handle_key(SDL_Event* e, bool keydown) {
       break;
     case SDLK_DOWN:
       downdown = keydown;
+      break;
+    case SDLK_w:
+      wdown = keydown;
+      break;
+    case SDLK_s:
+      sdown = keydown;
       break;
     default:
       break;
@@ -91,6 +97,7 @@ int main(int ac, char** av) {
   int lastFrameTime = 0;
   int updateInterval = 1000/60;
   int maxCyclesPerFrame = 8;
+  double camH = 100;
   SDL_Event e;
 
   Vector cv;
@@ -120,7 +127,11 @@ int main(int ac, char** av) {
         cv.x -= 0.2;
       if (rightdown)
         cv.x += 0.2;
-      
+
+      if (wdown)
+        camH += 1;
+      if (sdown)
+        camH -= 1;
 
       double h; 
       Uint8 r,g,b;
@@ -129,7 +140,7 @@ int main(int ac, char** av) {
         Uint32 c = getpixel(map, (int)(eye.x)%map->w,(int)(eye.z)%map->h);         
         SDL_GetRGB(c, scr->format, &r, &g, &b);
         h = (double)r * 0.25;
-        double target = (h+155) - eye.y;
+        double target = (h+camH) - eye.y;
         cv.y = (target - cv.y) * 0.1;
       }
       cam->eye(cam->eye() + cv);
@@ -155,7 +166,7 @@ int main(int ac, char** av) {
       Uint8 r,g,b;
       Ray ray = cam->getRayFromUV(x,0);
       ch = ray.pos.y;
-      for (double d = 35; d < MAX_D; d += 1 + LOD_FACTOR*(int)(d-135)/MAX_D) {
+      for (double d = 35; d < MAX_D; d += 1 + LOD_FACTOR*(int)(d-100)/MAX_D) {
         cx = 1 * (ray.pos.x + ray.norm.x * d);
         cz = 1 * (ray.pos.z + ray.norm.z * d);
         if (cx < 0 || cz < 0) continue;
