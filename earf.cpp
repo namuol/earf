@@ -10,6 +10,9 @@
 #define SCR_W 640
 #define SCR_H 400
 
+#define MAX_D 512
+#define LOD_FACTOR 4
+
 using namespace std;
 bool running = true;
 bool leftdown, rightdown, updown, downdown;
@@ -126,7 +129,7 @@ int main(int ac, char** av) {
         Uint32 c = getpixel(map, (int)(eye.x)%map->w,(int)(eye.z)%map->h);         
         SDL_GetRGB(c, scr->format, &r, &g, &b);
         h = (double)r * 0.25;
-        double target = (h+55) - eye.y;
+        double target = (h+155) - eye.y;
         cv.y = (target - cv.y) * 0.1;
       }
       cam->eye(cam->eye() + cv);
@@ -152,7 +155,7 @@ int main(int ac, char** av) {
       Uint8 r,g,b;
       Ray ray = cam->getRayFromUV(x,0);
       ch = ray.pos.y;
-      for (double d = 5; d < 255; d += 1) {
+      for (double d = 35; d < MAX_D; d += 1 + LOD_FACTOR*(int)(d-135)/MAX_D) {
         cx = 1 * (ray.pos.x + ray.norm.x * d);
         cz = 1 * (ray.pos.z + ray.norm.z * d);
         if (cx < 0 || cz < 0) continue;
@@ -175,16 +178,17 @@ int main(int ac, char** av) {
         int y = SCR_H - (((h - ch) * 350) / d + SCR_H);
 
         //cout << y << endl;
-        if (y < 0) break;
-        if (y >= SCR_H) continue;
+        if (y < 0) continue;
 
-        double fog = 1.0 - d/255;
+        double fog = 1.0 - d/MAX_D;
         r*=fog;
         g*=fog;
         b*=fog;
         if (y < maxY) {
-          for (int _y = maxY; _y > y; --_y)
+          for (int _y = maxY; _y > y; --_y) {
+            if (_y >= SCR_H) continue;
             setpixel(scr, x,_y, r,g,b);
+          }
           maxY = y;
         }
       }
