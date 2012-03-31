@@ -6,8 +6,8 @@
 #include "POSIXTimer.h"
 #include "Camera.h"
 
-#define SCR_W 320
-#define SCR_H 200
+#define SCR_W 640
+#define SCR_H 400
 
 using namespace std;
 bool running = true;
@@ -87,45 +87,34 @@ int main(int ac, char** av) {
     if(SDL_MUSTLOCK(scr)) SDL_LockSurface(scr);
     if(SDL_MUSTLOCK(map)) SDL_LockSurface(map);
     for (int x=0; x < SCR_W; ++x) {
-      double dMax = 32;
-      double dMaxH = 0;
+      double maxH = 0;
+      int maxY = SCR_H;
       double cx,cy,cz;
+      double h, ch;
       Uint32 c;
-      for (int y=SCR_H-1; y >= 0; --y) {
-        //Ray r = cam->getRayFromUV(x,y);
-        for (double d = 5; d < 256; d += 1) {
-          cam->fastCast(x,y,d, cx,cy,cz); 
-          //cout << cy << endl;
-          //Vector p = r.pos + r.norm * d;
-          if (cy > 256 || cy < 0 || cx < 0 || cz < 0) break;
-          double h;
-          /*
-          if (p.y < dMaxH) {
-            h = dMaxH;
-          } else { 
-          */
-            Uint32 _c = getpixel(map, ((int)cx) % map->w, ((int)cz) % map->h);
-            Uint8 r,g,b;
-            SDL_GetRGB(_c, scr->format, &r, &g, &b);
-            h = ((double)r)*0.25;
-            /*
-            r *= 1-(d/256);
-            g *= 1-(d/256);
-            b *= 1-(d/256);
-            */
-            c = _c;//SDL_MapRGB(scr->format, r,g,b);//_c;
-            /*
-            if (h > dMaxH) {
-              dMax = d;
-              dMaxH = h;
-            }
-            */
-          //}
-          if (cy < h) {
+      Uint8 r,g,b;
+      Ray ray = cam->getRayFromUV(x,0);
+      ch = ray.pos.y;
+      for (double d = 15; d < 256; d += 1) {
+        cx = ray.pos.x + ray.norm.x * d;
+        cz = ray.pos.z + ray.norm.z * d;
+        if (cx < 0 || cz < 0) continue;
+        //cout << cx << ":" << cz << endl;
+        c = getpixel(map, (int)cx%map->w,(int)cz%map->h);         
+        h = (double)r * 0.25;
+        //cout << "h: " << h << endl;
+        SDL_GetRGB(c, scr->format, &r, &g, &b);
+        //int y = SCR_H/2 - (((h - ch) * (13.4/d)) / 256.0) * SCR_H;
+        int y = ((h - ch) * 250) / d + SCR_H; 
+        //cout << y << endl;
+        if (y < 0) continue;
+        if (y >= SCR_H) break;
+        
+        //if (y < maxY) {
+          //for (int _y = maxY; _y > y; --_y)
             setpixelc(scr, x,y, c);
-            break;
-          }
-        }
+          //maxY = y;
+        //}
       }
     }
     // For each column of pixels...
